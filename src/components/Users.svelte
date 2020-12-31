@@ -1,9 +1,8 @@
 <script>
-
 import {ajax} from 'rxjs/ajax'
-import {from, of, Observable} from 'rxjs'
+import {from, of, Observable, merge} from 'rxjs'
 import {map, catchError, take, delay, mergeMap, concatMap} from 'rxjs/operators'
-import { onMount } from 'svelte';
+import { onDestroy, onMount } from 'svelte';
 
     let users = [];
     let url = `https://jsonplaceholder.typicode.com/users`
@@ -14,21 +13,40 @@ import { onMount } from 'svelte';
                 console.log(err)
             })
         )
+    const albums$ = ajax.getJSON(`https://jsonplaceholder.typicode.com/albums`).pipe(
+            take(1),
+            catchError(err => {
+                console.log(err)
+            })
+        )
 
     onMount(() => {
        // todo...
     })
 
-    users$.subscribe(value => {
+    // combine users and albums
+
+    const usersAlbumsStream$ = users$.subscribe(value => {
         let obs = new Observable(observer => {
             observer.next(value);
             observer.complete();
         }).pipe(
             mergeMap(x => from(x)),
-            concatMap(x => of(x).pipe(delay(1000)))
+            concatMap(x => of(x).pipe(delay(200)))
         ).subscribe(x => {
-            users = [...users,x]
+            albums$.pipe(
+                mergeMap(z => from(z)),
+                concatMap(z => of(z).pipe(delay(1000))),
+                map(z => ({name: x.name, album: z.title}))
+            )
+            .subscribe(v => {
+                users = [...users, v]
+            })
         })
+    })
+
+    onDestroy(() => {
+        usersAlbumsStream$.unsubscribe()
     })
 
 
@@ -41,7 +59,7 @@ import { onMount } from 'svelte';
 {#each users as user}
 <div class="card" style="margin-bottom: 20px;">
     <div class="card-header">{user.name}</div>
-    <div class="card-body">{user.email}</div>
+    <div class="card-body">{user.album}</div>
 </div>
 {/each}
 </div>
