@@ -64,8 +64,10 @@ import { onDestroy, onMount } from 'svelte';
                 })
             })
             return custom
-        })
-    ).subscribe(v => users = v)
+        }),
+        mergeMap(t => from(t)),
+        concatMap(r => of(r).pipe(delay(500)))
+    ).subscribe(v => users = [...users, v])
 
 
     onDestroy(() => {
