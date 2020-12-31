@@ -1,8 +1,11 @@
 <script>
 import {ajax} from 'rxjs/ajax'
-import {from, of, Observable, merge} from 'rxjs'
+import {from, of, Observable, merge, combineLatest, concat, zip} from 'rxjs'
 import {map, catchError, take, delay, mergeMap, concatMap} from 'rxjs/operators'
 import { onDestroy, onMount } from 'svelte';
+
+   const weight = of(10,20,30,40);
+   const height = of(1,2,3,4);
 
     let users = [];
     let url = `https://jsonplaceholder.typicode.com/users`
@@ -24,29 +27,49 @@ import { onDestroy, onMount } from 'svelte';
        // todo...
     })
 
+    const bmi = concat(weight, height).pipe();
+
+    bmi.subscribe(x => console.log(x));
+
     // combine users and albums
 
-    const usersAlbumsStream$ = users$.subscribe(value => {
+    const usersStream$ = users$.subscribe(value => {
         let obs = new Observable(observer => {
             observer.next(value);
             observer.complete();
         }).pipe(
             mergeMap(x => from(x)),
-            concatMap(x => of(x).pipe(delay(200)))
-        ).subscribe(x => {
-            albums$.pipe(
-                mergeMap(z => from(z)),
-                concatMap(z => of(z).pipe(delay(1000))),
-                map(z => ({name: x.name, album: z.title}))
-            )
-            .subscribe(v => {
-                users = [...users, v]
-            })
-        })
+            concatMap(x => of(x).pipe(delay(1000)))
+        )
     })
 
+    const albumsStream$ = albums$.subscribe(value => {
+        let obs = new Observable(observer => {
+            observer.next(value);
+            observer.complete();
+        }).pipe(
+            mergeMap(x => from(x)),
+            concatMap(x => of(x).pipe(delay(1000)))
+        )
+    })
+
+
+    zip(users$, albums$).pipe(
+        map(([x,y]) => {
+            let custom = [];
+            x.forEach(elem => {
+                y.forEach(item => {
+                    if (elem.id == item.userId)
+                    custom.push({name: elem.username, album: item.title})
+                })
+            })
+            return custom
+        })
+    ).subscribe(v => users = v)
+
+
     onDestroy(() => {
-        usersAlbumsStream$.unsubscribe()
+        //...
     })
 
 
