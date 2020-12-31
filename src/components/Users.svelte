@@ -6,6 +6,17 @@ import { onDestroy, onMount } from 'svelte';
 
    const weight = of(10,20,30,40);
    const height = of(1,2,3,4);
+   let counter = 0;
+   let count = 0
+   let count$ = of(count)
+
+
+   $: {
+       count = counter*2
+       count$ = of(count).pipe(
+           map(k => k*2-1)
+       )
+   }
 
     let users = [];
     let url = `https://jsonplaceholder.typicode.com/users`
@@ -29,7 +40,7 @@ import { onDestroy, onMount } from 'svelte';
 
     const bmi = concat(weight, height).pipe();
 
-    bmi.subscribe(x => console.log(x));
+   // bmi.subscribe(x => console.log(x));
 
     // combine users and albums
 
@@ -76,10 +87,17 @@ import { onDestroy, onMount } from 'svelte';
 
 
 
+const plus = () => {
+    counter = counter + 1
+    count$.subscribe(v => console.log(v))
+}
 
 </script>
 
 <div class="container">
+<h2>{counter}</h2>
+<h2>{count}</h2>
+<button on:click={plus}>Plus</button>
 <h1>Users: </h1>
 {#each users as user}
 <div class="card" style="margin-bottom: 20px;">
